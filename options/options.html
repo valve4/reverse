@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reverse — Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>⚙️ Settings</h1>
+    </header>
+
+    <form id="settings-form" class="settings-form">
+
+      <!-- API Configuration -->
+      <section class="section">
+        <h2>API Configuration</h2>
+        <div class="form-field">
+          <label for="api-provider">API Provider</label>
+          <select id="api-provider">
+            <option value="amadeus">Amadeus (Recommended, free tier)</option>
+            <option value="skyscanner">Skyscanner</option>
+          </select>
+          <p class="hint">Amadeus free tier: 1,500 requests/day. Get your key at developers.amadeus.com</p>
+        </div>
+
+        <div class="form-field">
+          <label for="api-key">API Key / Client ID</label>
+          <input type="password" id="api-key" placeholder="Enter your Amadeus API key">
+          <p class="hint">Your key is stored locally in the browser. Never shared.</p>
+        </div>
+
+        <div class="form-field">
+          <label for="api-secret">API Secret</label>
+          <input type="password" id="api-secret" placeholder="Enter your Amadeus API secret">
+        </div>
+      </section>
+
+      <!-- Notification Settings -->
+      <section class="section">
+        <h2>Notifications</h2>
+
+        <div class="form-field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" placeholder="you@example.com">
+          <p class="hint">We will send an email when we find a fare that is $50+ cheaper than your last search.</p>
+        </div>
+
+        <div class="form-field">
+          <label for="email-threshold">Email threshold ($)</label>
+          <input type="number" id="email-threshold" min="0" step="5">
+          <p class="hint">Minimum price difference to trigger an email. Default: $50</p>
+        </div>
+      </section>
+
+      <!-- Search Settings -->
+      <section class="section">
+        <h2>Search</h2>
+
+        <div class="form-field">
+          <label>Background Search</label>
+          <div class="radio-group">
+            <label><input type="radio" name="background-frequency" value="disabled"> Disabled</label>
+            <label><input type="radio" name="background-frequency" value="daily"> Daily</label>
+            <label><input type="radio" name="background-frequency" value="weekly"> Weekly</label>
+            <label><input type="radio" name="background-frequency" value="12hours"> Every 12 hours</label>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="currency">Currency</label>
+          <select id="currency">
+            <option value="USD">USD — US Dollar</option>
+            <option value="EUR">EUR — Euro</option>
+            <option value="GBP">GBP — British Pound</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="max-results">Max Results</label>
+          <input type="number" id="max-results" min="1" max="100" value="20">
+          <p class="hint">Maximum number of results to return.</p>
+        </div>
+
+        <div class="form-field">
+          <label><input type="checkbox" id="include-reverse" checked> Include reverse-direction flights</label>
+        </div>
+
+        <div class="form-field">
+          <label><input type="checkbox" id="include-split" checked> Include split-leg flights</label>
+        </div>
+      </section>
+
+      <!-- Danger zone -->
+      <section class="section danger">
+        <h2>Data</h2>
+        <button type="button" id="clear-data-btn" class="btn-danger">Clear all saved data</button>
+      </section>
+
+      <!-- Save -->
+      <div class="save-bar">
+        <button type="submit" class="btn-primary">Save settings</button>
+        <span id="save-status" class="save-status"></span>
+      </div>
+    </form>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reverse — Flight Fare Finder</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>Reverse</h1>
+      <span class="tag">Flight Fare Finder</span>
+    </header>
+
+    <!-- Search Form -->
+    <form id="search-form" class="search-form">
+      <div class="form-group">
+        <label for="origin">From</label>
+        <input type="text" id="origin" placeholder="New York" value="new york" required autocomplete="off">
+        <p class="help-text">Type city name — we'll check nearby airports</p>
+      </div>
+
+      <div class="form-group">
+        <label for="destination">To</label>
+        <input type="text" id="destination" placeholder="London" value="london" required autocomplete="off">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group half">
+          <label for="depart">Depart</label>
+          <input type="date" id="depart" required>
+        </div>
+        <div class="form-group half">
+          <label for="return">Return</label>
+          <input type="date" id="return" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="include-reverse" checked>
+          Include reverse flights
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="search-btn">
+        <span class="btn-text">Search All Routes</span>
+        <span class="btn-spinner" hidden></span>
+      </button>
+    </form>
+
+    <!-- Loading State -->
+    <div id="loading" class="loading-state" hidden>
+      <div class="spinner"></div>
+      <p>Searching 40+ route combinations...</p>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="results" hidden>
+      <div class="results-header">
+        <h2>Results</h2>
+        <span id="results-count" class="count-badge">0 options</span>
+      </div>
+      <div id="results-list" class="results-list"></div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="empty-state" hidden>
+      <p>No results found. Try different dates or cities.</p>
+    </div>
+
+    <!-- Settings link -->
+    <footer class="footer">
+      <a href="#" id="open-settings">⚙️ Settings</a>
+      <span class="divider">|</span>
+      <span class="version">v0.1.0</span>
+    </footer>
+  </div>
+
+  <script src="../lib/city-data.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
