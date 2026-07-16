@@ -11,6 +11,21 @@ import { generateQueries, groupSplitLegs } from './fare-search.js';
 import { fetchFare, rateLimitedFetch } from './api-service.js';
 import { checkForBigDrops } from './notifications.js';
 
+// ---- Initialize: always clear stale alarm state ----
+chrome.runtime.onInstalled.addListener(function (details) {
+  // On every install (fresh install or updates), ensure alarms are
+  // cleared. They will be re-created only if the user enables them.
+  chrome.alarms.clear('reverse-background-search', function () {
+    console.log('[background] Stale alarm cleared on install/update');
+  });
+
+  // On first run (no previous settings), show the options page
+  // so the user doesn't trigger searches before configuring the extension.
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: 'options/options.html' });
+  }
+});
+
 // ---- Message dispatch ----
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === 'search') {
@@ -30,7 +45,66 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     sendResponse({ success: true });
     return true;
   }
+
+  if (message.action === 'clearAlarm') {
+    chrome.alarms.clear('reverse-background-search');
+    sendResponse({ success: true });
+    return true;
+  }
 });
+
+/**
+ * Concurrency-limited search runner.
+ * Executes `queries` in batches of `maxConcurrent`, with
+ * `delayMs` between each batch. Prevents service worker timeout.
+ *
+ * @param {Array<Query>} queries
+ * @param {object} settings
+ * @returns {Promise<Array<Fare | null>>}
+ */
+function runWithConcurrency(queries, settings) {
+  var maxConcurrent = Math.min(5, queries.length);
+  var delayMs = 1500; // 1.5s between batches avoids rate limits
+  var results = new Array(queries.length);
+  var index = 0;
+
+  return new Promise(function (resolve, reject) {
+    function launchBatch() {
+      if (index >= queries.length) {
+        // All done
+        resolve(results);
+        return;
+      }
+
+      var promises = [];
+      var batchEnd = Math.min(index + maxConcurrent, queries.length);
+
+      for (var i = index; i < batchEnd; i++) {
+        (function (query, idx) {
+          var promise = rateLimitedFetch(function () {
+            return fetchFare(query, settings);
+          }, { maxRetries: 2, initialDelay: 100 })
+            .then(function (fare) { return fare; })
+            .catch(function (err) {
+              console.warn('[background] Failed to fetch fare for', query.originCode + '→' + query.destinationCode, err);
+              return null;
+            });
+          promises.push(promise.then(function (fare) { results[idx] = fare; return fare; }));
+        })(queries[i], i);
+      }
+
+      index = batchEnd;
+
+      if (index >= queries.length) {
+        Promise.all(promises).then(resolve).catch(reject);
+      } else {
+        setTimeout(launchBatch, delayMs);
+      }
+    }
+
+    launchBatch();
+  });
+}
 
 /**
  * Handle a search request from the popup.
@@ -63,25 +137,10 @@ async function handleSearch(data) {
     includeSplit: data.includeSplit !== undefined ? data.includeSplit : settings.includeSplit,
   });
 
-  // Fetch fares for each query concurrently (rate limited)
+  // Fetch fares for each query with concurrency limiting
   console.log('[background] Generating ' + queries.length + ' queries from ' + data.origin + '→' + data.destination);
 
-  var results = await Promise.all(
-    queries.map(async function (query) {
-      try {
-        var fare = await rateLimitedFetch(function () {
-          return fetchFare(query, settings);
-        }, { maxRetries: 2, initialDelay: 100 });
-        return fare;
-      } catch (err) {
-        console.warn('[background] Failed to fetch fare for', query.originCode + '→' + query.destinationCode, err);
-        return null;
-      }
-    })
-  ).catch(function (err) {
-    console.error('[background] Promise.all error:', err);
-    return [];
-  });
+  var results = await runWithConcurrency(queries, settings);
 
   // Filter nulls and sort by price ascending
   var fares = results.filter(Boolean).sort(function (a, b) {
@@ -118,28 +177,23 @@ async function handleSearch(data) {
  * @param {string} frequency — 'disabled' | 'daily' | 'weekly' | '12hours'
  */
 function updateAlarmSchedule(frequency) {
-  // Clear existing alarm
-  chrome.alarms.clear('reverse-background-search');
+  if (frequency === 'disabled') {
+    chrome.alarms.clear('reverse-background-search');
+    console.log('[background] Alarm cleared');
+    return;
+  }
 
-  if (frequency === 'disabled') return;
-
-  // Get search settings from storage
-  chrome.storage.local.get(['origin', 'destination', 'depart', 'return'], function (items) {
-    if (items.origin && items.destination && items.depart && items.return) {
-      var schedule = frequency === 'daily'
-        ? { periodInMinutes: 1440 }
-        : frequency === 'weekly'
-          ? { periodInMinutes: 10080 }
-          : frequency === '12hours'
-            ? { periodInMinutes: 720 }
-            : null;
-
-      if (schedule) {
-        chrome.alarms.create('reverse-background-search', schedule);
-        console.log('[background] Alarm scheduled for every ' + frequency);
-      }
-    }
+  chrome.alarms.create('reverse-background-search', {
+    periodInMinutes: frequency === 'daily'
+      ? 1440
+      : frequency === 'weekly'
+        ? 10080
+        : frequency === '12hours'
+          ? 720
+          : 1440,
   });
+
+  console.log('[background] Alarm scheduled for every ' + frequency);
 }
 
 // Handle alarm events

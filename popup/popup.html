@@ -12,6 +12,7 @@
     <header class="header">
       <h1>Reverse</h1>
       <span class="tag">Flight Fare Finder</span>
+      <a href="#" id="open-settings" class="settings-link" title="Settings">⚙️</a>
     </header>
 
     <!-- Search Form -->
@@ -51,14 +52,24 @@
       </button>
     </form>
 
-    <!-- Loading State -->
+    <!-- Loading state (shown while searching) -->
     <div id="loading" class="loading-state" hidden>
       <div class="spinner"></div>
-      <p>Searching 40+ route combinations...</p>
+      <p>Searching <span id="loading-count">40+</span> route combinations...</p>
+    </div>
+
+    <!-- Quick actions bar (shown between form and results) -->
+    <div id="quick-actions" class="quick-actions" hidden>
+      <button type="button" id="search-again-btn" class="btn btn-secondary">
+        🔍 Search Again
+      </button>
+      <button type="button" id="reset-btn" class="btn btn-ghost">
+        ✕ Reset
+      </button>
     </div>
 
     <!-- Results -->
-    <div id="results" class="results" hidden>
+    <div id="results-panel" class="results-panel" hidden>
       <div class="results-header">
         <h2>Results</h2>
         <span id="results-count" class="count-badge">0 options</span>
@@ -71,9 +82,8 @@
       <p>No results found. Try different dates or cities.</p>
     </div>
 
-    <!-- Settings link -->
+    <!-- Footer -->
     <footer class="footer">
-      <a href="#" id="open-settings">⚙️ Settings</a>
       <span class="divider">|</span>
       <span class="version">v0.1.0</span>
     </footer>

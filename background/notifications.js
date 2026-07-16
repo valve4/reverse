@@ -31,13 +31,13 @@ async function checkForBigDrops(newFares, settings, previousFares) {
   var emailSent = false;
 
   // Always show desktop notification
-  await showDesktopNotification(bestNew, settings.email);
+  await showDesktopNotification(bestNew);
   desktopShown = true;
 
   // Email if big drop threshold is met
   if (isBigDrop && settings.email) {
     var savings = prevBest.totalPrice - bestNew.totalPrice;
-    var emailSent = await sendEmailAlert(bestNew, savings, settings.email);
+    emailSent = await sendEmailAlert(bestNew, savings, settings.email);
     if (emailSent) {
       // Store the previous best price for next comparison
       await chrome.storage.local.set({
@@ -58,10 +58,9 @@ async function checkForBigDrops(newFares, settings, previousFares) {
  * Show a Chrome desktop notification.
  *
  * @param {Fare} fare
- * @param {string|null} email
  * @returns {Promise<void>}
  */
-async function showDesktopNotification(fare, email) {
+async function showDesktopNotification(fare) {
   try {
     var title = 'Reverse: ' + fare.originCode + ' → ' + fare.destinationCode + ' — $' + fare.totalPrice.toFixed(0);
     var message = 'Total travel time: ' + formatDuration(fare.totalTravelTime) +

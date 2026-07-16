@@ -7,24 +7,27 @@
   'use strict';
 
   // ---- DOM refs ----
-  const form = document.getElementById('search-form');
-  const originInput = document.getElementById('origin');
-  const destInput = document.getElementById('destination');
-  const departInput = document.getElementById('depart');
-  const returnInput = document.getElementById('return');
-  const searchBtn = document.getElementById('search-btn');
-  const loadingEl = document.getElementById('loading');
-  const resultsEl = document.getElementById('results');
-  const resultsListEl = document.getElementById('results-list');
-  const resultsCountEl = document.getElementById('results-count');
-  const emptyStateEl = document.getElementById('empty-state');
-  const openSettingsLink = document.getElementById('open-settings');
+  var form = document.getElementById('search-form');
+  var originInput = document.getElementById('origin');
+  var destInput = document.getElementById('destination');
+  var departInput = document.getElementById('depart');
+  var returnInput = document.getElementById('return');
+  var searchBtn = document.getElementById('search-btn');
+  var loadingEl = document.getElementById('loading');
+  var resultsPanelEl = document.getElementById('results-panel');
+  var resultsListEl = document.getElementById('results-list');
+  var resultsCountEl = document.getElementById('results-count');
+  var emptyStateEl = document.getElementById('empty-state');
+  var quickActionsEl = document.getElementById('quick-actions');
+  var searchAgainBtn = document.getElementById('search-again-btn');
+  var resetBtn = document.getElementById('reset-btn');
+  var openSettingsLink = document.getElementById('open-settings');
 
   // Set default dates to tomorrow and next week
   (function setDefaultDates() {
-    const tomorrow = new Date();
+    var tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date();
+    var nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 8);
 
     departInput.value = formatDate(tomorrow);
@@ -33,6 +36,8 @@
 
   // ---- Event listeners ----
   form.addEventListener('submit', handleSearch);
+  searchAgainBtn.addEventListener('click', handleSearch);
+  resetBtn.addEventListener('click', handleReset);
   openSettingsLink.addEventListener('click', function (e) {
     e.preventDefault();
     chrome.tabs.create({ url: 'options/options.html' });
@@ -45,13 +50,13 @@
    *
    * @param {Event} e
    */
-  async function handleSearch(e) {
-    e.preventDefault();
+  function handleSearch(e) {
+    if (e) e.preventDefault();
 
-    const origin = originInput.value.trim();
-    const dest = destInput.value.trim();
-    const depart = departInput.value;
-    const returned = returnInput.value;
+    var origin = originInput.value.trim();
+    var dest = destInput.value.trim();
+    var depart = departInput.value;
+    var returned = returnInput.value;
 
     // Validate
     if (!origin || !dest) {
@@ -69,35 +74,65 @@
       return;
     }
 
-    const includeReverse = document.getElementById('include-reverse').checked;
+    // Hide results / quick actions while searching
+    resultsPanelEl.classList.add('hidden');
+    emptyStateEl.classList.add('hidden');
+    quickActionsEl.classList.add('hidden');
 
-    // Show loading state
     setLoading(true);
 
     // Send search request to background service worker
-    try {
-      const results = await chrome.runtime.sendMessage({
-        action: 'search',
-        data: {
-          origin: origin.toLowerCase(),
-          destination: dest.toLowerCase(),
-          depart: depart,
-          return: returned,
-          includeReverse: includeReverse,
-        },
-      });
+    chrome.runtime.sendMessage({
+      action: 'search',
+      data: {
+        origin: origin.toLowerCase(),
+        destination: dest.toLowerCase(),
+        depart: depart,
+        return: returned,
+        includeReverse: document.getElementById('include-reverse').checked,
+      },
+    }, function (results) {
+      setLoading(false);
 
-      if (results && results.success) {
+      if (chrome.runtime.lastError) {
+        showFormStatus('Could not reach background service. Is the extension loaded?', 'error');
+        return;
+      }
+
+      if (results && results.success && results.fares && results.fares.length > 0) {
+        showQuickActions();
         renderResults(results.fares);
+      } else if (results && results.success) {
+        emptyStateEl.classList.remove('hidden');
+        showQuickActions();
       } else {
         showFormStatus(results?.error || 'Search failed. Please try again.', 'error');
       }
-    } catch (err) {
-      console.error('[popup] Search error:', err);
-      showFormStatus('Could not reach background service.', 'error');
-    } finally {
-      setLoading(false);
-    }
+    });
+  }
+
+  /**
+   * Reset the popup to its initial state.
+   */
+  function handleReset() {
+    form.classList.remove('hidden');
+    resultsPanelEl.classList.add('hidden');
+    emptyStateEl.classList.add('hidden');
+    quickActionsEl.classList.add('hidden');
+
+    originInput.value = 'new york';
+    destInput.value = 'london';
+
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    var nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 8);
+    departInput.value = formatDate(tomorrow);
+    returnInput.value = formatDate(nextWeek);
+
+    // Remove any status messages
+    var statusEl = document.getElementById('form-status');
+    if (statusEl) statusEl.remove();
   }
 
   /**
@@ -105,28 +140,16 @@
    * @param {Array<Fare>} fares — sorted results from background
    */
   function renderResults(fares) {
-    resultsEl.classList.remove('hidden');
-    emptyStateEl.classList.add('hidden');
-    form.classList.add('hidden');
-
-    if (!fares || fares.length === 0) {
-      resultsEl.classList.add('hidden');
-      emptyStateEl.classList.remove('hidden');
-      return;
-    }
-
-    // Find the baseline price for savings display
-    const baseline = fares[0]?.totalPrice || 0;
-
+    resultsPanelEl.classList.remove('hidden');
     resultsListEl.innerHTML = '';
 
     fares.forEach(function (fare, i) {
-      const card = document.createElement('div');
+      var card = document.createElement('div');
       card.className = 'result-card' + (i === 0 ? ' best' : '');
 
       // Tag(s)
-      const tags = fare.tags || [];
-      const tagHtml = tags
+      var tags = fare.tags || [];
+      var tagHtml = tags
         .map(function (tag) {
           var badgeClass = 'badge-' + tag;
           var label = tag.charAt(0).toUpperCase() + tag.slice(1);
@@ -143,12 +166,12 @@
         viaHtml = '<span class="via"> via ' + fare.via.toUpperCase() + '</span>';
       }
 
-      // Savings display
+      // Savings display (vs cheapest result)
       var savingsHtml = '';
-      if (fare.totalPrice < baseline) {
-        var saved = baseline - fare.totalPrice;
+      if (i > 0 && fare.totalPrice < fares[0].totalPrice) {
+        var saved = fares[0].totalPrice - fare.totalPrice;
         savingsHtml =
-          '<span class="savings">Save $' + saved.toFixed(0) + ' vs direct</span>';
+          '<span class="savings">Save $' + saved.toFixed(0) + ' vs best</span>';
       }
 
       card.innerHTML =
@@ -183,6 +206,17 @@
     });
 
     resultsCountEl.textContent = fares.length + ' option' + (fares.length !== 1 ? 's' : '');
+
+    // Update loading count
+    var loadingCountEl = document.getElementById('loading-count');
+    if (loadingCountEl) loadingCountEl.textContent = fares.length;
+  }
+
+  /**
+   * Show the quick actions bar (Search Again / Reset).
+   */
+  function showQuickActions() {
+    quickActionsEl.classList.remove('hidden');
   }
 
   /**
@@ -195,11 +229,13 @@
     if (loading) {
       document.querySelector('.btn-text').textContent = 'Searching...';
       document.querySelector('.btn-spinner').hidden = false;
-      resultsEl.classList.add('hidden');
+      loadingEl.classList.remove('hidden');
+      resultsPanelEl.classList.add('hidden');
       emptyStateEl.classList.add('hidden');
     } else {
       document.querySelector('.btn-text').textContent = 'Search All Routes';
       document.querySelector('.btn-spinner').hidden = true;
+      loadingEl.classList.add('hidden');
     }
   }
 
