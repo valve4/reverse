@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+*.log
+*.jsonl
+.keys/
+.env
+.scan_state.json
+.event_cache.json

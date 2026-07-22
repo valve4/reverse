@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Reverse — Flight Fare Finder",
+  "name": "Arb-Scanner – Prediction Market Arbitrage",
   "version": "0.1.0",
   "description": "Find cheaper flights by searching reverse routes, split legs, and nearby airports. Sorts all options by price automatically.",
   "permissions": [
